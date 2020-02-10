@@ -50,6 +50,8 @@ The [QUERY](https://developers.google.com/assistant/smarthome/reference/rest/v1/
 
 The DISCONNECT intent does not have any impact. Accept when we also implement the following functionality.
 
+### Push notifications
+
 There's one thing quite different from Amazon and that is that Google requires you to push messages to its cloud as well. This is quite annoying and privacy-sensitive. Do we really want to inform Google every time that the state of a Crownstone has changed? However, it states quite clearly that it is required before an action can be deployed:
 
 [Request Sync](https://developers.google.com/assistant/smarthome/develop/request-sync), this is a trigger to update the "HomeGraph", the list of devices in your home. It has to be triggered after adding/removing a device. After the request, a new SYNC request will be sent to the lambda function.
@@ -58,6 +60,38 @@ There's one thing quite different from Amazon and that is that Google requires y
 
 Hence, Crownstone has to implement those services as well. However, we can subsequently give the user the option to have this information communicated to Google or not. The most logical place is the "connection" part in the Crownstone app. 
 
+Let's take a look at [Request Sync](https://developers.google.com/assistant/smarthome/develop/request-sync). It shows a `nodejs` snippet.
+
+```
+const {smarthome} = require('actions-on-google');
+const app = smarthome({
+  jwt: require('path/key_file.json')
+});
+```
+
+Navigate to <https://console.cloud.google.com/apis/credentials/serviceaccountkey> and follow the instructions:
+
+* Select "New service account".
+* In the Service account name field, enter something like "Crownstone Google Home Push Service".
+* In the Service account ID field, enter a ID.
+* From the Role list, select Service Accounts > Service Account Token Creator.
+* For the Key type, select the JSON option.
+* Click Create. The above `key_file.json` from the snippet that contains your key, downloads to your computer.
+
+You can test if it works by filling in your own user-id (that you can obtain through the `users/me` endpoint on the Crownstone cloud).
+
+```                               
+app.requestSync('crownstone-user-id')
+  .then((res) => {
+    // Request sync was successful                                                                                      
+  })                                                                                                                    
+  .catch((res) => {                                                                                                     
+    // Request sync failed
+    console.log("Request failed", res);
+  });                                                                                                                                                                
+```
+
+You will see that it's successful by monitoring Amazon Cloudwatch, starting with something like <https://eu-west-1.console.aws.amazon.com/cloudwatch/home?region=eu-west-1#logEventViewer>.
 
 ## Logging
 
