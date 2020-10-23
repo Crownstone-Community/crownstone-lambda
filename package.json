@@ -1,0 +1,8 @@
+{
+  "name": "crownstone-lambda_alexa",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "rm -f function.zip && cd src && zip -r ../function.zip . && cd .."
+  }
+}

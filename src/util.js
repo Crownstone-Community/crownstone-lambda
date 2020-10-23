@@ -31,7 +31,7 @@ const util = {
       payload: payload
     };
 
-    return result;
+    return JSON.stringify(result, undefined, 2);
   },
 
 
@@ -43,7 +43,27 @@ const util = {
        */
       context.fail(util.generateControlError('Discovery', 'DEPENDENT_SERVICE_UNAVAILABLE', 'Unable to connect to server'));
     };
+  },
+
+  prettifyDeviceType: function(str) {
+    switch (str) {
+      case "PLUG":
+        return "Crownstone Plug";
+      case "BUILTIN":
+        return "Crownstone Built-In";
+      case "BUILTIN_ONE":
+        return "Crownstone Built-In One";
+      case "GUIDESTONE":
+        return "Guidestone";
+      case "CROWNSTONE_USB":
+        return "Crownstone USB Dongle";
+      case "CROWNSTONE_HUB":
+        return "Crownstone Hub";
+    }
+    return str;
   }
+
 };
+
 
 module.exports = util;

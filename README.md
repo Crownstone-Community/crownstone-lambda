@@ -29,70 +29,6 @@ Technically, this is what will happen when you say “Alexa, turn on the living 
 recognized by Alexa, it then goes to the Amazon servers, initiates a request to the Crownstone cloud, sends a push 
 message via Apple/Google to your iPhone or Android device, which will then control the Crownstones.
 
-## Google Home
-
-Google Home is not officially released yet. It has been partly implemented. First of all, in the Actions console, a fulfillment URL is specified. This is an URL of an Amazon REST API which functions as an interface to the Lambda function. 
-
-There are several intents implemented. The documentation on how to process intents can be found [here](https://developers.google.com/assistant/smarthome/develop/process-intents).
-
-There are four intents:
-
-* action.devices.SYNC
-* action.devices.QUERY
-* action.devices.EXECUTE
-* action.devices.DISCONNECT
-
-The ones that are implemented for now are the SYNC and the EXECUTE intents. The [SYNC](https://developers.google.com/assistant/smarthome/reference/rest/v1/devices/sync) intent is a discovery process. It returns a list of Crownstones devices to be used from your Google Home. You can use the [validator](https://developers.google.com/assistant/smarthome/tools/validator) to check if the format is actually correct. The EXECUTE intent can be used to actually turn on/off or dim devices.
-
-There are certain fields ignored by our system. For example, we do not know if a particular device is actually plugged in. This information is not available in our cloud. We therefore do always set a device to "online" and never return a status "OFFLINE". 
-
-The [QUERY](https://developers.google.com/assistant/smarthome/reference/rest/v1/devices/query) intent has not been implemented. It returns only state information. So, it would be completely useless in our case. However, it might be necessary to have it implemented from Google's perspective.
-
-The DISCONNECT intent does not have any impact. Accept when we also implement the following functionality.
-
-### Push notifications
-
-There's one thing quite different from Amazon and that is that Google requires you to push messages to its cloud as well. This is quite annoying and privacy-sensitive. Do we really want to inform Google every time that the state of a Crownstone has changed? However, it states quite clearly that it is required before an action can be deployed:
-
-[Request Sync](https://developers.google.com/assistant/smarthome/develop/request-sync), this is a trigger to update the "HomeGraph", the list of devices in your home. It has to be triggered after adding/removing a device. After the request, a new SYNC request will be sent to the lambda function.
-
-[Report State](https://developers.google.com/assistant/smarthome/develop/report-state), this is a regular update that tells Google what the state of a device is. Google wants this information so bad that it actually disregards status information obtained through a QUERY or EXECUTE request. 
-
-Hence, Crownstone has to implement those services as well. However, we can subsequently give the user the option to have this information communicated to Google or not. The most logical place is the "connection" part in the Crownstone app. 
-
-Let's take a look at [Request Sync](https://developers.google.com/assistant/smarthome/develop/request-sync). It shows a `nodejs` snippet.
-
-```
-const {smarthome} = require('actions-on-google');
-const app = smarthome({
-  jwt: require('path/key_file.json')
-});
-```
-
-Navigate to <https://console.cloud.google.com/apis/credentials/serviceaccountkey> and follow the instructions:
-
-* Select "New service account".
-* In the Service account name field, enter something like "Crownstone Google Home Push Service".
-* In the Service account ID field, enter a ID.
-* From the Role list, select Service Accounts > Service Account Token Creator.
-* For the Key type, select the JSON option.
-* Click Create. The above `key_file.json` from the snippet that contains your key, downloads to your computer.
-
-You can test if it works by filling in your own user-id (that you can obtain through the `users/me` endpoint on the Crownstone cloud).
-
-```                               
-app.requestSync('crownstone-user-id')
-  .then((res) => {
-    // Request sync was successful                                                                                      
-  })                                                                                                                    
-  .catch((res) => {                                                                                                     
-    // Request sync failed
-    console.log("Request failed", res);
-  });                                                                                                                                                                
-```
-
-You will see that it's successful by monitoring Amazon Cloudwatch, starting with something like <https://eu-west-1.console.aws.amazon.com/cloudwatch/home?region=eu-west-1#logEventViewer>.
-
 ## Logging
 
 The logs can be found in Amazon Cloudwatch. The log streams are quite annoying. Sometimes a new log stream is created, at other times it is added to an existing log stream. While debugging, make sure you refresh the overview of the log streams as well as the top one. If the latest log stream is not receiving events anymore, it might very well be that a new log stream is created in the overview. Just make sure you refresh everything.
@@ -102,4 +38,12 @@ The logs can be found in Amazon Cloudwatch. The log streams are quite annoying. 
 If you don’t have Crownstones yet, you can get them at the [webshop](https://shop.crownstone.rocks). If you like to know more about this type of technology, subscribe to our in-depth [smart home email updates](https://crownstone.rocks/email-updates/).
 
 Enjoy your voice-controlled home!
+
+## Building
+
+If you want, you can use npm run build to make a zip file that you can upload to aws!
+
+
+## Common issues:
+If the skill is not invoking the AWS lambda, ensure you have defined active regions for all enabled languages.
 

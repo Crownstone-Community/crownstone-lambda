@@ -19,7 +19,7 @@ function handleDiscovery(event, context) {
   let options = {
     hostname: config.REMOTE_CLOUD_HOSTNAME,
     port: 443,
-    path: config.REMOTE_CLOUD_BASE_PATH + '/Stones/all' + '?access_token=' + accessToken,
+    path: config.REMOTE_CLOUD_BASE_PATH + '/Stones/all?filter={"include":["location",{"abilities":"properties"}]}&access_token=' + accessToken,
     headers: {
       accept: 'application/json'
     }
@@ -75,30 +75,8 @@ function getResponseHandler(event, context) {
        */
       for (let i = 0; i < stones.length; i++) {
         let stone = stones[i];
-        let stoneEndpoint = {
-          endpointId: stone.id,
-          manufacturerName: 'Crownstone',
-          description: stone.type,
-          friendlyName: stone.name,
-          displayCategories: ["SWITCH"],
-          cookie: {
-            address: stone.address,
-            sphere:  stone.sphereId,
-            appliance_type: stone.applianceId
-          },
-          capabilities: [{
-            type: "AlexaInterface",
-            interface: "Alexa.PowerController",
-            version: "3",
-            properties: {
-              supported: [{
-                name: "powerState"
-              }],
-              proactivelyReported: true,
-              retrievable: false
-            }
-          }],
-        };
+
+        let stoneEndpoint = generateStoneEntry(stone);
         endpoints.push(stoneEndpoint);
       }
 
@@ -122,6 +100,88 @@ function getResponseHandler(event, context) {
   };
 }
 
+
+const powerStateCapability = {
+  type: "AlexaInterface",
+  interface: "Alexa.PowerController",
+  version: "3",
+  properties: {
+    supported: [{
+      name: "powerState"
+    }],
+    proactivelyReported: true,
+    retrievable: false
+  }
+};
+
+const powerLevelCapability = {
+  type: "AlexaInterface",
+  interface: "Alexa.PowerLevelController",
+  version: "3",
+  properties: {
+    supported: [{name: "powerLevel"}],
+    proactivelyReported: true,
+    retrievable: false
+  }
+};
+
+
+function generateStoneEntry(stone) {
+  let canDim = false;
+  for (let j = 0; j < stone.abilities.length; j++) {
+    if (stone.abilities[j].type === 'dimming') {
+      if (stone.abilities[j].enabled === true) {
+        canDim = true;
+      }
+      break;
+    }
+  }
+
+  let cookie = {
+    address: stone.address,
+    sphere:  stone.sphereId,
+    dimmable: canDim,
+  };
+
+  let locationName = stone.location && stone.location.name || null;
+  let stoneDescription = stone.description;
+  let description = util.prettifyDeviceType(stone.type);
+  if (locationName) {
+    description += " in " + locationName;
+  }
+  if (stoneDescription) {
+    description += '\n'+stoneDescription;
+  }
+
+  let info = {
+    endpointId: stone.id,
+    manufacturerName: 'Crownstone',
+    description: description,
+    friendlyName: stone.name,
+  }
+
+  let stoneEndpoint
+  if (canDim) {
+    stoneEndpoint = {
+      ...info,
+      displayCategories: ["LIGHT"],
+      cookie: cookie,
+      capabilities: [
+        powerLevelCapability,
+        powerStateCapability
+      ],
+    };
+  }
+  else {
+    stoneEndpoint = {
+      ...info,
+      displayCategories: ["SWITCH"],
+      cookie,
+      capabilities: [powerStateCapability],
+    };
+  }
+  return stoneEndpoint;
+}
 
 
 module.exports = {
