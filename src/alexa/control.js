@@ -24,44 +24,60 @@ function handleControl(event, context) {
     return context.fail(util.generateControlError('SwitchOnOffRequest', 'UNSUPPORTED_OPERATION', 'Unrecognized operation'));
   }
 
+  //TODO: remove duplicate code
   if (header.namespace === 'Alexa.PowerController') {
     let accessToken = endpoint.scope.token;
     let requestMethod = header.name;
-    let basePath = config.REMOTE_CLOUD_BASE_PATH + '/Stones/' + endpointId + '/switch?switchData=' + JSON.stringify({type: (requestMethod === 'TurnOn' ? "TURN_ON" : "TURN_OFF") }) +  + '&access_token=' + accessToken;
+    let basePath = config.REMOTE_CLOUD_BASE_PATH + '/Stones/' + endpointId + '/switch?access_token=' + accessToken;
 
-    log('basePath', basePath);
+    let postData = JSON.stringify({type: (requestMethod === 'TurnOn' ? "TURN_ON" : "TURN_OFF")});
 
     let options = {
       hostname: config.REMOTE_CLOUD_HOSTNAME,
       port: 443,
       path: basePath,
-      method: 'PUT',
+      method: 'POST',
       headers: {
-        accept: '*/*'
+        accept: '*/*',
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
       }
     };
 
-    https.request(options, getPowerRequestHandler(event, context)).on('error', util.getErrorHandler(context)).end();
+    console.log(options.method, 'Requesting to', basePath, "with options", options, 'and data', postData);
+
+    let postRequest = https.request(options, getPowerRequestHandler(event, context));
+
+    postRequest.on('error', util.getErrorHandler(context));
+    postRequest.write(postData);
+    postRequest.end();
   }
   else if (header.namespace === 'Alexa.PowerLevelController') {
     let accessToken = endpoint.scope.token;
     let payload = event.directive.payload;
     let level = payload.powerLevel;
-    let basePath = config.REMOTE_CLOUD_BASE_PATH + '/Stones/' + endpointId + '/switch?switchData=' + JSON.stringify({type: "PERCENTAGE", percentage: level })  + '&access_token=' + accessToken;
+    let basePath = config.REMOTE_CLOUD_BASE_PATH + '/Stones/' + endpointId + '/switch?access_token=' + accessToken;
 
-    log('basePath', basePath);
+    let postData = JSON.stringify({type: "PERCENTAGE", percentage: level });
 
     let options = {
       hostname: config.REMOTE_CLOUD_HOSTNAME,
       port: 443,
       path: basePath,
-      method: 'PUT',
+      method: 'POST',
       headers: {
-        accept: '*/*'
+        accept: '*/*',
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
       }
     };
 
-    https.request(options, getPowerLevelRequestHandler(event, context, level)).on('error', util.getErrorHandler(context)).end();
+    console.log(options.method, 'Requesting to', basePath, "with options", options, 'and data', postData);
+
+    let postRequest = https.request(options, getPowerLevelRequestHandler(event, context, level))
+    postRequest.on('error', util.getErrorHandler(context));
+    postRequest.write(postData);
+    postRequest.end();
   }
 }
 
@@ -75,7 +91,7 @@ function getPowerRequestHandler(event, context) {
     });
 
     response.on('end', function() {
-
+      console.log("result body", body)
       let header = event.directive.header;
       let endpoint = event.directive.endpoint;
 
@@ -121,6 +137,7 @@ function getPowerLevelRequestHandler(event, context, level) {
     });
 
     response.on('end', function() {
+      console.log("result body", body)
       let header = event.directive.header;
       let endpoint = event.directive.endpoint;
 
